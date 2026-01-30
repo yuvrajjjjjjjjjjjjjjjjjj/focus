@@ -1,12 +1,11 @@
 const CACHE_NAME = 'focus-timer-v2';
 const urlsToCache = [
-  './index.html',     // Make sure file name index.html hai
+  './index.html',
   './manifest.json',
-  './icon-192.png',   // Naye premium icon ka link
-  './icon-512.png'    // Naye premium icon ka link
+  './icon-192.png',
+  './icon-512.png'
 ];
 
-// Install service worker and cache files
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -14,7 +13,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// Fetch from cache first, then network
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
@@ -27,7 +25,6 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Update service worker (purana cache clean karne ke liye)
 self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
