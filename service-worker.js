@@ -1,41 +1,44 @@
-const CACHE_NAME = 'focus-timer-v2'; // Version badal diya taaki phone naya data fetch kare
+const CACHE_NAME = 'focus-timer-v2';
 const urlsToCache = [
-  './index.html',     // Isse check kar lein ki aapki main file ka naam index.html hi hai
+  './index.html',     // Make sure file name index.html hai
   './manifest.json',
-  './icon-192.png',   // Ye wahi icons hain jo aapne upload kiye
-  './icon-512.png'
+  './icon-192.png',   // Naye premium icon ka link
+  './icon-512.png'    // Naye premium icon ka link
 ];
 
-// Service worker install hote hi files ko cache (save) kar leta hai
+// Install service worker and cache files
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('Opened cache');
-      return cache.addAll(urlsToCache);
-    })
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(urlsToCache))
   );
 });
 
-// Purane cache ko delete karne ke liye
+// Fetch from cache first, then network
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request)
+      .then(response => {
+        if (response) {
+          return response;
+        }
+        return fetch(event.request);
+      })
+  );
+});
+
+// Update service worker (purana cache clean karne ke liye)
 self.addEventListener('activate', event => {
+  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
             return caches.delete(cacheName);
           }
         })
       );
-    })
-  );
-});
-
-// Network se pehle cache check karega, isse app instant khulegi
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
     })
   );
 });
