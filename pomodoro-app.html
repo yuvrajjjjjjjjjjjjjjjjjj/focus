@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Timer - Premium Pomodoro</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Premium Pomodoro timer for focused productivity">
+    <meta name="theme-color" content="#8b7355">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Focus">
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect fill='%238b7355' width='192' height='192' rx='40'/%3E%3Ctext x='96' y='130' font-size='100' text-anchor='middle' fill='%230f0f0f' font-family='serif' font-weight='bold'%3E🍅%3C/text%3E%3C/svg%3E">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0f0f0f;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #252525;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --text-muted: #6b6b6b;
+            --accent: #8b7355;
+            --accent-light: #a68968;
+            --accent-dark: #6d5b44;
+            --work-color: #8b7355;
+            --break-color: #5a7d7c;
+            --long-break-color: #6b5d7a;
+            --success: #5a7d5a;
+            --border: #2a2a2a;
+            --shadow: rgba(0, 0, 0, 0.4);
+        }
+
+        .light-theme {
+            --bg-primary: #fafafa;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f0f0f0;
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --text-muted: #8a8a8a;
+            --accent: #8b7355;
+            --accent-light: #a68968;
+            --accent-dark: #6d5b44;
+            --work-color: #8b7355;
+            --break-color: #5a7d7c;
+            --long-break-color: #6b5d7a;
+            --success: #5a7d5a;
+            --border: #e0e0e0;
+            --shadow: rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Onboarding Screen */
+        .onboarding-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .onboarding-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .onboarding-content {
+            text-align: center;
+            max-width: 500px;
+            padding: 3rem;
+            animation: fadeInUp 0.6s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .onboarding-content h1 {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+            letter-spacing: -1px;
+        }
+
+        .onboarding-content p {
+            color: var(--text-secondary);
+            margin-bottom: 2.5rem;
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        .onboarding-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: 'Work Sans', sans-serif;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .onboarding-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+        .onboarding-button {
+            width: 100%;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Work Sans', sans-serif;
+        }
+
+        .onboarding-button:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+        }
+
+        /* Header */
+        header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1.5rem;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .greeting {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+            animation: fadeIn 1s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .profile-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--bg-primary);
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .profile-icon:hover {
+            background: var(--accent-light);
+            transform: scale(1.05);
+        }
+
+        /* Profile Menu */
+        .profile-menu {
+            position: absolute;
+            top: 70px;
+            right: 2rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            min-width: 280px;
+            box-shadow: 0 10px 40px var(--shadow);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            z-index: 200;
+        }
+
+        .profile-menu.show {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+
+        .profile-menu h3 {
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .profile-menu input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-family: 'Work Sans', sans-serif;
+        }
+
+        .profile-menu input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .theme-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .theme-switch label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--bg-tertiary);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .switch.active {
+            background: var(--accent);
+        }
+
+        .switch::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .switch.active::after {
+            transform: translateX(24px);
+        }
+
+        .timer-settings {
+            border-top: 1px solid var(--border);
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .setting-item label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .setting-item input {
+            width: 60px;
+            padding: 0.5rem;
+            text-align: center;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            flex: 1;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--shadow);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .stat-subtext {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Timer Section */
+        .timer-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .timer-card {
+            background: var(--bg-secondary);
+            padding: 3rem 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .timer-modes {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .mode-btn {
+            padding: 0.6rem 1.2rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            font-weight: 500;
+            font-family: 'Work Sans', sans-serif;
+        }
+
+        .mode-btn:hover {
+            background: var(--bg-primary);
+        }
+
+        .mode-btn.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border-color: var(--accent);
+        }
+
+        .timer-display {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 5rem;
+            margin: 2rem 0;
+            color: var(--text-primary);
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .control-btn {
+            padding: 0.9rem 2rem;
+            background: var(--accent);
+            border: none;
+            border-radius: 10px;
+            color: var(--bg-primary);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-family: 'Work Sans', sans-serif;
+        }
+
+        .control-btn:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .control-btn.secondary:hover {
+            background: var(--bg-primary);
+        }
+
+        /* Task List */
+        .task-card {
+            background: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .task-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .task-input-group {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .task-input {
+            flex: 1;
+            padding: 0.9rem 1.2rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            font-family: 'Work Sans', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .task-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--bg-primary);
+        }
+
+        .pomodoro-input {
+            width: 60px;
+            padding: 0.9rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            text-align: center;
+            font-size: 0.95rem;
+            font-family: 'Work Sans', sans-serif;
+        }
+
+        .add-task-btn {
+            padding: 0.9rem 1.5rem;
+            background: var(--accent);
+            border: none;
+            border-radius: 10px;
+            color: var(--bg-primary);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-family: 'Work Sans', sans-serif;
+        }
+
+        .add-task-btn:hover {
+            background: var(--accent-light);
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .task-item:hover {
+            background: var(--bg-primary);
+        }
+
+        .task-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .task-checkbox.checked {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .task-checkbox.checked::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: var(--bg-primary);
+            font-weight: bold;
+        }
+
+        .task-text {
+            flex: 1;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .task-text.completed {
+            text-decoration: line-through;
+            color: var(--text-muted);
+        }
+
+        .task-pomodoros {
+            display: flex;
+            gap: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        .pomodoro-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0.3;
+        }
+
+        .task-delete {
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .task-delete:hover {
+            color: #c75450;
+        }
+
+        /* Focus Sounds */
+        .sound-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-tertiary);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sound-toggle:hover {
+            background: var(--bg-primary);
+        }
+
+        .sound-toggle-btn {
+            width: 40px;
+            height: 24px;
+            background: var(--border);
+            border-radius: 12px;
+            position: relative;
+            transition: background 0.3s ease;
+        }
+
+        .sound-toggle-btn.active {
+            background: var(--accent);
+        }
+
+        .sound-toggle-btn::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            background: var(--text-primary);
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .sound-toggle-btn.active::after {
+            transform: translateX(16px);
+        }
+
+        .sound-label {
+            flex: 1;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            margin-top: auto;
+        }
+
+        .founder-signature {
+            font-family: 'Libre Baskerville', serif;
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .founder-name {
+            color: var(--accent);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 2rem 1rem;
+            }
+
+            header {
+                padding: 1rem 1.5rem;
+            }
+
+            .logo {
+                font-size: 1.2rem;
+            }
+
+            .greeting {
+                display: none;
+            }
+
+            .timer-section {
+                grid-template-columns: 1fr;
+            }
+
+            .timer-display {
+                font-size: 4rem;
+            }
+
+            .stats-bar {
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .task-input-group {
+                flex-direction: column;
+            }
+
+            .pomodoro-input {
+                width: 100%;
+            }
+
+            .profile-menu {
+                right: 1rem;
+                left: 1rem;
+                min-width: auto;
+            }
+
+            .onboarding-content h1 {
+                font-size: 2rem;
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <!-- Onboarding Screen -->
+    <div class="onboarding-overlay" id="onboardingOverlay">
+        <div class="onboarding-content">
+            <h1>Focus.</h1>
+            <p>Welcome to your premium productivity companion</p>
+            <input type="text" id="onboardingNameInput" class="onboarding-input" placeholder="Enter your name" />
+            <button class="onboarding-button" onclick="completeOnboarding()">Begin Journey</button>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">Focus</div>
+        <div class="greeting" id="greeting"></div>
+        <div class="profile-icon" id="profileIcon" onclick="toggleProfileMenu()">Y</div>
+    </header>
+
+    <!-- Profile Menu -->
+    <div class="profile-menu" id="profileMenu">
+        <h3>Profile Settings</h3>
+        <input type="text" id="nameInput" placeholder="Your Name" />
+        
+        <div class="theme-switch">
+            <label>Light Mode</label>
+            <div class="switch" id="themeSwitch" onclick="toggleTheme()"></div>
+        </div>
+
+        <div class="timer-settings">
+            <h3>Timer Settings (minutes)</h3>
+            <div class="setting-item">
+                <label>Work Duration</label>
+                <input type="number" id="workDuration" value="25" min="1" max="60" />
+            </div>
+            <div class="setting-item">
+                <label>Short Break</label>
+                <input type="number" id="shortBreakDuration" value="5" min="1" max="30" />
+            </div>
+            <div class="setting-item">
+                <label>Long Break</label>
+                <input type="number" id="longBreakDuration" value="15" min="1" max="60" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-label">Today's Focus</div>
+                <div class="stat-value" id="pomodorosToday">0</div>
+                <div class="stat-subtext">pomodoros completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Focus Time</div>
+                <div class="stat-value" id="focusTime">0h 0m</div>
+                <div class="stat-subtext">of deep work</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Tasks Done</div>
+                <div class="stat-value" id="tasksDone">0</div>
+                <div class="stat-subtext">completed today</div>
+            </div>
+        </div>
+
+        <!-- Timer and Tasks Section -->
+        <div class="timer-section">
+            <!-- Timer Card -->
+            <div class="timer-card">
+                <div class="timer-modes">
+                    <button class="mode-btn active" data-mode="work">Work</button>
+                    <button class="mode-btn" data-mode="short">Short Break</button>
+                    <button class="mode-btn" data-mode="long">Long Break</button>
+                </div>
+                
+                <div class="timer-display" id="timerDisplay">25:00</div>
+                
+                <div class="timer-controls">
+                    <button class="control-btn" id="startBtn" onclick="startTimer()">Start</button>
+                    <button class="control-btn secondary" id="resetBtn" onclick="resetTimer()">Reset</button>
+                </div>
+
+                <div class="sound-toggle" onclick="toggleSound()">
+                    <div class="sound-toggle-btn" id="soundToggle"></div>
+                    <div class="sound-label">Focus Sounds (Soft Rain)</div>
+                </div>
+            </div>
+
+            <!-- Task List Card -->
+            <div class="task-card">
+                <h2>Today's Tasks</h2>
+                <div class="task-input-group">
+                    <input type="text" class="task-input" id="taskInput" placeholder="What needs to be done?" />
+                    <input type="number" class="pomodoro-input" id="pomodoroCount" placeholder="🍅" value="1" min="1" max="10" />
+                    <button class="add-task-btn" onclick="addTask()">Add</button>
+                </div>
+                <div class="task-list" id="taskList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="founder-signature">
+            Founder <span class="founder-name">Yuvraj Sharma</span>
+        </div>
+    </footer>
+
+    <!-- Audio Elements -->
+    <audio id="focusSound" loop>
+        <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" type="audio/wav">
+    </audio>
+    <audio id="completeSound">
+        <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=" type="audio/wav">
+    </audio>
+
+    <script>
+        // State Management
+        let timerInterval = null;
+        let timeLeft = 25 * 60;
+        let isRunning = false;
+        let currentMode = 'work';
+        let soundEnabled = false;
+        let tasks = [];
+        let stats = {
+            pomodorosToday: 0,
+            focusTime: 0,
+            tasksDone: 0,
+            lastResetDate: new Date().toDateString()
+        };
+
+        // Motivational Quotes
+        const quotes = [
+            "Let's focus.",
+            "Time to create.",
+            "Ready to achieve.",
+            "Let's make progress.",
+            "Focus brings clarity.",
+            "Your best work awaits."
+        ];
+
+        // Initialize App
+        function initApp() {
+            loadSettings();
+            loadTasks();
+            loadStats();
+            checkOnboarding();
+            setupEventListeners();
+            updateUI();
+            checkDailyReset();
+        }
+
+        // Check if onboarding is needed
+        function checkOnboarding() {
+            const userName = localStorage.getItem('userName');
+            if (!userName) {
+                document.getElementById('onboardingOverlay').classList.remove('hidden');
+            } else {
+                document.getElementById('onboardingOverlay').classList.add('hidden');
+                updateGreeting();
+            }
+        }
+
+        // Complete onboarding
+        function completeOnboarding() {
+            const nameInput = document.getElementById('onboardingNameInput');
+            const name = nameInput.value.trim();
+            
+            if (name) {
+                localStorage.setItem('userName', name);
+                document.getElementById('onboardingOverlay').classList.add('hidden');
+                updateGreeting();
+                updateProfileIcon();
+            } else {
+                nameInput.style.borderColor = '#c75450';
+                setTimeout(() => {
+                    nameInput.style.borderColor = '';
+                }, 1000);
+            }
+        }
+
+        // Update greeting
+        function updateGreeting() {
+            const userName = localStorage.getItem('userName') || 'Friend';
+            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            document.getElementById('greeting').textContent = `Hey ${userName}, ${randomQuote}`;
+        }
+
+        // Update profile icon
+        function updateProfileIcon() {
+            const userName = localStorage.getItem('userName') || 'Y';
+            document.getElementById('profileIcon').textContent = userName.charAt(0).toUpperCase();
+        }
+
+        // Load settings
+        function loadSettings() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'light') {
+                document.body.classList.add('light-theme');
+                document.getElementById('themeSwitch').classList.add('active');
+            }
+
+            const workDuration = localStorage.getItem('workDuration') || 25;
+            const shortBreak = localStorage.getItem('shortBreakDuration') || 5;
+            const longBreak = localStorage.getItem('longBreakDuration') || 15;
+
+            document.getElementById('workDuration').value = workDuration;
+            document.getElementById('shortBreakDuration').value = shortBreak;
+            document.getElementById('longBreakDuration').value = longBreak;
+
+            const userName = localStorage.getItem('userName');
+            if (userName) {
+                document.getElementById('nameInput').value = userName;
+                updateProfileIcon();
+            }
+        }
+
+        // Save settings
+        function saveSettings() {
+            const workDuration = document.getElementById('workDuration').value;
+            const shortBreak = document.getElementById('shortBreakDuration').value;
+            const longBreak = document.getElementById('longBreakDuration').value;
+
+            localStorage.setItem('workDuration', workDuration);
+            localStorage.setItem('shortBreakDuration', shortBreak);
+            localStorage.setItem('longBreakDuration', longBreak);
+
+            if (currentMode === 'work') {
+                timeLeft = workDuration * 60;
+            } else if (currentMode === 'short') {
+                timeLeft = shortBreak * 60;
+            } else {
+                timeLeft = longBreak * 60;
+            }
+
+            updateDisplay();
+        }
+
+        // Load tasks
+        function loadTasks() {
+            const savedTasks = localStorage.getItem('tasks');
+            if (savedTasks) {
+                tasks = JSON.parse(savedTasks);
+                renderTasks();
+            }
+        }
+
+        // Save tasks
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        // Load stats
+        function loadStats() {
+            const savedStats = localStorage.getItem('stats');
+            if (savedStats) {
+                stats = JSON.parse(savedStats);
+            }
+            updateStatsDisplay();
+        }
+
+        // Save stats
+        function saveStats() {
+            localStorage.setItem('stats', JSON.stringify(stats));
+        }
+
+        // Check if day has changed
+        function checkDailyReset() {
+            const today = new Date().toDateString();
+            if (stats.lastResetDate !== today) {
+                stats.pomodorosToday = 0;
+                stats.focusTime = 0;
+                stats.tasksDone = 0;
+                stats.lastResetDate = today;
+                saveStats();
+                updateStatsDisplay();
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Mode buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (!isRunning) {
+                        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        currentMode = this.dataset.mode;
+                        resetTimer();
+                    }
+                });
+            });
+
+            // Name input
+            document.getElementById('nameInput').addEventListener('change', function() {
+                localStorage.setItem('userName', this.value);
+                updateGreeting();
+                updateProfileIcon();
+            });
+
+            // Timer duration inputs
+            ['workDuration', 'shortBreakDuration', 'longBreakDuration'].forEach(id => {
+                document.getElementById(id).addEventListener('change', saveSettings);
+            });
+
+            // Task input enter key
+            document.getElementById('taskInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addTask();
+            });
+
+            // Click outside profile menu to close
+            document.addEventListener('click', function(e) {
+                const profileMenu = document.getElementById('profileMenu');
+                const profileIcon = document.getElementById('profileIcon');
+                if (!profileMenu.contains(e.target) && !profileIcon.contains(e.target)) {
+                    profileMenu.classList.remove('show');
+                }
+            });
+        }
+
+        // Toggle profile menu
+        function toggleProfileMenu() {
+            document.getElementById('profileMenu').classList.toggle('show');
+        }
+
+        // Toggle theme
+        function toggleTheme() {
+            document.body.classList.toggle('light-theme');
+            document.getElementById('themeSwitch').classList.toggle('active');
+            const theme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
+            localStorage.setItem('theme', theme);
+        }
+
+        // Toggle sound
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundToggle').classList.toggle('active');
+            
+            if (soundEnabled && isRunning) {
+                playFocusSound();
+            } else {
+                stopFocusSound();
+            }
+        }
+
+        // Play focus sound (placeholder - would need actual audio file)
+        function playFocusSound() {
+            // In production, load an actual ambient sound file
+            const audio = document.getElementById('focusSound');
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+
+        // Stop focus sound
+        function stopFocusSound() {
+            const audio = document.getElementById('focusSound');
+            audio.pause();
+            audio.currentTime = 0;
+        }
+
+        // Play completion sound
+        function playCompleteSound() {
+            // In production, load an actual notification sound
+            const audio = document.getElementById('completeSound');
+            audio.play().catch(e => console.log('Audio play failed:', e));
+        }
+
+        // Start timer
+        function startTimer() {
+            if (!isRunning) {
+                isRunning = true;
+                document.getElementById('startBtn').textContent = 'Pause';
+                
+                if (soundEnabled) {
+                    playFocusSound();
+                }
+
+                timerInterval = setInterval(() => {
+                    timeLeft--;
+                    updateDisplay();
+
+                    if (timeLeft <= 0) {
+                        completePomodoro();
+                    }
+                }, 1000);
+            } else {
+                pauseTimer();
+            }
+        }
+
+        // Pause timer
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            document.getElementById('startBtn').textContent = 'Resume';
+            stopFocusSound();
+        }
+
+        // Reset timer
+        function resetTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            document.getElementById('startBtn').textContent = 'Start';
+            stopFocusSound();
+
+            const workDuration = parseInt(localStorage.getItem('workDuration')) || 25;
+            const shortBreak = parseInt(localStorage.getItem('shortBreakDuration')) || 5;
+            const longBreak = parseInt(localStorage.getItem('longBreakDuration')) || 15;
+
+            if (currentMode === 'work') {
+                timeLeft = workDuration * 60;
+            } else if (currentMode === 'short') {
+                timeLeft = shortBreak * 60;
+            } else {
+                timeLeft = longBreak * 60;
+            }
+
+            updateDisplay();
+        }
+
+        // Complete pomodoro
+        function completePomodoro() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            stopFocusSound();
+            playCompleteSound();
+            
+            if (currentMode === 'work') {
+                stats.pomodorosToday++;
+                stats.focusTime += parseInt(localStorage.getItem('workDuration')) || 25;
+                saveStats();
+                updateStatsDisplay();
+                
+                // Auto-switch to break
+                if (stats.pomodorosToday % 4 === 0) {
+                    switchMode('long');
+                } else {
+                    switchMode('short');
+                }
+            } else {
+                switchMode('work');
+            }
+
+            document.getElementById('startBtn').textContent = 'Start';
+            
+            // Show notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Focus Timer', {
+                    body: currentMode === 'work' ? 'Great work! Time for a break.' : 'Break over! Ready to focus?',
+                    icon: '🍅'
+                });
+            }
+        }
+
+        // Switch mode
+        function switchMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                }
+            });
+            resetTimer();
+        }
+
+        // Update display
+        function updateDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timerDisplay').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Update stats display
+        function updateStatsDisplay() {
+            document.getElementById('pomodorosToday').textContent = stats.pomodorosToday;
+            
+            const hours = Math.floor(stats.focusTime / 60);
+            const minutes = stats.focusTime % 60;
+            document.getElementById('focusTime').textContent = `${hours}h ${minutes}m`;
+            
+            document.getElementById('tasksDone').textContent = stats.tasksDone;
+        }
+
+        // Add task
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            const pomodoroInput = document.getElementById('pomodoroCount');
+            const text = input.value.trim();
+            const pomodoros = parseInt(pomodoroInput.value) || 1;
+
+            if (text) {
+                tasks.push({
+                    id: Date.now(),
+                    text: text,
+                    completed: false,
+                    pomodoros: pomodoros
+                });
+
+                saveTasks();
+                renderTasks();
+                input.value = '';
+                pomodoroInput.value = 1;
+            }
+        }
+
+        // Toggle task
+        function toggleTask(id) {
+            const task = tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                if (task.completed) {
+                    stats.tasksDone++;
+                    saveStats();
+                    updateStatsDisplay();
+                } else {
+                    stats.tasksDone--;
+                    saveStats();
+                    updateStatsDisplay();
+                }
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        // Delete task
+        function deleteTask(id) {
+            const taskIndex = tasks.findIndex(t => t.id === id);
+            if (taskIndex > -1) {
+                if (tasks[taskIndex].completed) {
+                    stats.tasksDone--;
+                    saveStats();
+                    updateStatsDisplay();
+                }
+                tasks.splice(taskIndex, 1);
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        // Render tasks
+        function renderTasks() {
+            const taskList = document.getElementById('taskList');
+            
+            if (tasks.length === 0) {
+                taskList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📝</div>
+                        <div>No tasks yet. Add your first task above.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            taskList.innerHTML = tasks.map(task => `
+                <div class="task-item">
+                    <div class="task-checkbox ${task.completed ? 'checked' : ''}" 
+                         onclick="toggleTask(${task.id})"></div>
+                    <div class="task-text ${task.completed ? 'completed' : ''}">${task.text}</div>
+                    <div class="task-pomodoros">
+                        ${Array(task.pomodoros).fill('<div class="pomodoro-dot"></div>').join('')}
+                    </div>
+                    <div class="task-delete" onclick="deleteTask(${task.id})">×</div>
+                </div>
+            `).join('');
+        }
+
+        // Update UI
+        function updateUI() {
+            updateDisplay();
+            renderTasks();
+            updateGreeting();
+        }
+
+        // Request notification permission
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Initialize app on load
+        initApp();
+
+        // Update greeting every 30 seconds with different quote
+        setInterval(updateGreeting, 30000);
+
+        // PWA Installation
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallPrompt();
+        });
+
+        function showInstallPrompt() {
+            // Create install banner
+            const installBanner = document.createElement('div');
+            installBanner.style.cssText = `
+                position: fixed;
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
+                background: var(--accent);
+                color: var(--bg-primary);
+                padding: 1rem 1.5rem;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                box-shadow: 0 8px 30px var(--shadow);
+                z-index: 1000;
+                animation: slideUp 0.4s ease;
+            `;
+            
+            installBanner.innerHTML = `
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; margin-bottom: 0.25rem;">Install Focus Timer</div>
+                    <div style="font-size: 0.85rem; opacity: 0.9;">Add to home screen for quick access</div>
+                </div>
+                <button id="installBtn" style="
+                    padding: 0.6rem 1.2rem;
+                    background: var(--bg-primary);
+                    color: var(--accent);
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    margin-left: 1rem;
+                    font-family: 'Work Sans', sans-serif;
+                ">Install</button>
+                <button id="dismissBtn" style="
+                    padding: 0.6rem 1rem;
+                    background: transparent;
+                    color: var(--bg-primary);
+                    border: none;
+                    cursor: pointer;
+                    margin-left: 0.5rem;
+                    font-size: 1.2rem;
+                ">×</button>
+            `;
+            
+            document.body.appendChild(installBanner);
+            
+            document.getElementById('installBtn').addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    deferredPrompt = null;
+                    installBanner.remove();
+                }
+            });
+            
+            document.getElementById('dismissBtn').addEventListener('click', () => {
+                installBanner.remove();
+            });
+        }
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(registration => console.log('SW registered:', registration))
+                    .catch(error => console.log('SW registration failed:', error));
+            });
+        }
+    </script>
+</body>
+</html>
